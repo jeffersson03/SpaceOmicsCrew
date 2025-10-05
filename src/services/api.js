@@ -1,3 +1,5 @@
+import mock from '../data/mock.json'
+
 export async function getEspecies() { return mock.especies }
 export async function getExperimentos() { return mock.experimentos }
 export async function getResultados() { return mock.resultado }

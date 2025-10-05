@@ -23,8 +23,14 @@ const props = defineProps({ especies: Array, autoRotateMs: { type: Number, defau
 const emit = defineEmits(['select', 'verRepositorio'])
 const idx = ref(0)
 let timer = null
-function next() { idx.value = (idx.value + 1) % props.especes.length; emit('select', props.especies[idx.value]) }
-function prev() { idx.value = (idx.value - 1 + props.especies.length) % props.especies.length; emit('select', props.especies[idx.value]) }
+function next() {
+    idx.value = (idx.value + 1) % props.especies.length
+    emit('select', props.especies[idx.value])
+}
+function prev() {
+    idx.value = (idx.value - 1 + props.especies.length) % props.especies.length
+    emit('select', props.especies[idx.value])
+}
 function centerOn(i) { idx.value = i; emit('select', props.especies[idx.value]) }
 function itemStyle(i) {
     const offset = i - idx.value
