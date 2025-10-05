@@ -8,7 +8,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 const props = defineProps({
     plant: { type: String, required: true },
     palette: { type: Object, default: () => ({}) },
-    rotationSpeed: { type: Number, default: 0.4 }
+    rotationSpeed: { type: Number, default: 0.4 },
+    texture: { type: String, default: '' }
 })
 
 const canvas = ref(null)
@@ -19,6 +20,9 @@ let height = 0
 let lastTime = 0
 let rotation = 0
 let resizeObserver = null
+let textureImage = null
+let textureAlpha = 0
+let targetTextureAlpha = 0
 
 const camera = { z: 6.5, fov: 3.2 }
 const light = normalize({ x: -0.45, y: 0.9, z: 0.6 })
@@ -32,6 +36,24 @@ const scenePalette = computed(() => ({
     ground: '#0a1020',
     halo: props.palette.glow || 'rgba(126, 240, 200, 0.5)'
 }))
+
+function loadTexture(src) {
+    if (typeof Image === 'undefined') return
+    textureImage = null
+    textureAlpha = 0
+    targetTextureAlpha = 0
+    if (!src) return
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+        textureImage = img
+        targetTextureAlpha = 0.55
+    }
+    img.onerror = () => {
+        textureImage = null
+    }
+    img.src = src
+}
 
 function withAlpha(color, alpha) {
     if (color.startsWith('#')) {
@@ -235,7 +257,7 @@ function buildPlant() {
     const base = createCylinder(1.4, 1.6, 0.25, 24)
     addMesh(meshes, base, { color: palette.ground, position: { x: 0, y: -1.6, z: 0 } })
 
-    state.pulses = [0, 0.4, 0.8].map(delay => ({ progress: delay }))
+    state.pulses = [0, 0.38, 0.76].map((delay, index) => ({ progress: delay, speed: 0.42 + index * 0.12 }))
 
     const plant = (props.plant || '').toLowerCase()
     if (plant.includes('arroz')) {
@@ -439,6 +461,27 @@ function render(delta) {
         ctx.closePath()
         ctx.fill()
     })
+
+    if (textureImage) {
+        const easing = delta ? Math.min(1, delta * 6) : 0.18
+        textureAlpha += (targetTextureAlpha - textureAlpha) * easing
+        const alpha = Math.max(0, Math.min(textureAlpha, 0.65))
+        if (alpha > 0.01) {
+            ctx.save()
+            ctx.translate(width / 2, height * 0.5)
+            ctx.rotate(rotation * 0.18)
+            const size = Math.min(width, height) * 0.58
+            ctx.globalAlpha = alpha
+            ctx.drawImage(textureImage, -size / 2, -size / 2, size, size)
+            ctx.globalCompositeOperation = 'lighter'
+            ctx.globalAlpha = alpha * 0.6
+            ctx.fillStyle = withAlpha(scenePalette.value.halo, 0.4)
+            ctx.beginPath()
+            ctx.ellipse(0, size * 0.1, size * 0.65, size * 0.25, 0, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.restore()
+        }
+    }
     ctx.globalAlpha = 1
 }
 
@@ -448,7 +491,8 @@ function animate(timestamp) {
     lastTime = timestamp
     rotation += delta * props.rotationSpeed
     state.pulses.forEach(pulse => {
-        pulse.progress += delta * 0.5
+        const speed = pulse.speed ?? 0.5
+        pulse.progress += delta * speed
         if (pulse.progress > 1.2) pulse.progress = 0
     })
     render(delta)
@@ -473,6 +517,7 @@ onMounted(() => {
     ctx = canvas.value.getContext('2d')
     resize()
     buildPlant()
+    loadTexture(props.texture)
     lastTime = 0
     rotation = 0
     animate(0)
@@ -497,6 +542,10 @@ watch(() => [props.plant, props.palette], () => {
     if (!ctx) return
     buildPlant()
 }, { deep: true })
+
+watch(() => props.texture, value => {
+    loadTexture(value)
+}, { immediate: true })
 </script>
 
 <style scoped>

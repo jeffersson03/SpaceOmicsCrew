@@ -8,8 +8,11 @@
         <div class="holo-stage">
             <RadarGraph class="holo-radar" :values="metrics" :labels="labels" :size="260" :palette="resolvedTheme.palette"
                 :hide-header="true" />
+            <img v-if="plantMedia.image" class="holo-silhouette" :src="plantMedia.image"
+                :alt="`Ilustración de ${especie.nombre_comun}`" />
             <div class="holo-plant">
-                <Plant3DScene :plant="especie.nombre_comun" :palette="resolvedTheme.palette" :rotation-speed="0.45" />
+                <Plant3DScene :plant="especie.nombre_comun" :palette="resolvedTheme.palette" :rotation-speed="0.45"
+                    :texture="plantMedia.texture" />
             </div>
         </div>
         <footer class="holo-footer">
@@ -31,6 +34,7 @@ import { computed } from 'vue'
 import RadarGraph from './RadarGraph.vue'
 import Plant3DScene from './Plant3DScene.vue'
 import { defaultPlantTheme } from '../data/plantThemes'
+import { getPlantMedia } from '../data/plantMedia'
 
 const props = defineProps({
     especie: { type: Object, required: true },
@@ -38,6 +42,8 @@ const props = defineProps({
     labels: { type: Object, default: () => ({}) },
     theme: { type: Object, default: () => ({}) }
 })
+
+const plantMedia = computed(() => props.especie.media || getPlantMedia(props.especie.nombre_comun || props.especie.nombre_cientifico))
 
 const resolvedTheme = computed(() => ({
     ...defaultPlantTheme,
@@ -115,6 +121,16 @@ function formatValue(key, value) {
     justify-content: center;
 }
 
+.holo-silhouette {
+    position: absolute;
+    width: 68%;
+    max-width: 220px;
+    opacity: 0.32;
+    filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.25));
+    mix-blend-mode: screen;
+    animation: silhouette-float 10s ease-in-out infinite;
+}
+
 .holo-stage :deep(.radar-card) {
     background: transparent;
     border: none;
@@ -138,6 +154,15 @@ function formatValue(key, value) {
     left: 50%;
     transform: translateX(-50%);
     pointer-events: none;
+}
+
+@keyframes silhouette-float {
+    0%, 100% {
+        transform: translateY(0px) scale(1);
+    }
+    50% {
+        transform: translateY(-6px) scale(1.03);
+    }
 }
 
 .holo-footer {

@@ -1,30 +1,37 @@
 <template>
   <section class="hero" aria-labelledby="hero-title">
     <video
+      v-if="videoSource"
       class="hero__video"
       autoplay
       loop
       muted
       playsinline
       preload="metadata"
+      :poster="posterSource || undefined"
       :style="{ opacity: videoOpacity }"
     >
       <source :src="videoSource" type="video/mp4" />
     </video>
+    <div v-else class="hero__video hero__video--fallback" :style="fallbackStyle" role="presentation"></div>
     <div class="hero__nebula"></div>
     <div class="hero__overlay"></div>
     <div class="hero__content">
-      <img class="hero__logo" :src="logoSrc" alt="Logo Space Omics Crew" />
-      <h1 id="hero-title">Hello, we are Space Omics Crew</h1>
-      <p class="hero__subtitle">
-        This is a repository dedicated to plants with the ability to be resilient
-      </p>
+      <img v-if="logoSrc" class="hero__logo" :src="logoSrc" alt="Logo Space Omics Crew" />
+      <transition name="hero-line" appear>
+        <h1 v-if="showHeadline" id="hero-title">Hello, we are Space Omics Crew</h1>
+      </transition>
+      <transition name="hero-line" appear>
+        <p v-if="showSubtitle" class="hero__subtitle">
+          This is a repository dedicated to plants with the ability to be resilient
+        </p>
+      </transition>
       <button class="btn btn-primary hero__cta" type="button" @click="$emit('explore')">
         Explore the radar atlas
         <span class="hero__cta-glow" />
       </button>
     </div>
-    <img class="hero__mascot" :src="mascotSrc" alt="Space Omics mascot" />
+    <img v-if="mascotSrc" class="hero__mascot" :src="mascotSrc" alt="Space Omics mascot looking forward" />
     <button class="hero__scroll" type="button" @click="$emit('explore')">
       <span>Scroll to explore</span>
       <span class="hero__scroll-indicator" />
@@ -33,25 +40,58 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { resolveAsset } from '../utils/assets'
 
 const props = defineProps({
   video: {
     type: String,
-    default: '/assets/images/galaxy.mp4'
+    default: 'images/galaxy.mp4'
+  },
+  poster: {
+    type: String,
+    default: 'images/galaxy-poster.svg'
+  },
+  mascot: {
+    type: String,
+    default: 'images/mascot-astro.svg'
+  },
+  logo: {
+    type: String,
+    default: 'images/logo-space.svg'
   },
   videoOpacity: {
     type: Number,
-    default: 0.28
+    default: 0.32
   }
 })
 
 defineEmits(['explore'])
 
-const logoSrc = new URL('../assets/images/logo-space.svg', import.meta.url).href
-const mascotSrc = new URL('../assets/images/mascot-astro.svg', import.meta.url).href
+const showHeadline = ref(false)
+const showSubtitle = ref(false)
 
-const videoSource = computed(() => props.video)
+onMounted(() => {
+  requestAnimationFrame(() => {
+    showHeadline.value = true
+    window.setTimeout(() => {
+      showSubtitle.value = true
+    }, 900)
+  })
+})
+
+const logoSrc = computed(() => resolveAsset(props.logo, { fallback: resolveAsset('images/logo-space.svg') }))
+const mascotSrc = computed(() => resolveAsset(props.mascot, { fallback: resolveAsset('images/mascot-astro.svg') }))
+const videoSource = computed(() => {
+  const resolved = resolveAsset(props.video, { fallback: null })
+  if (!resolved) return null
+  return /\.(mp4|webm|ogg)(\?|$)/i.test(resolved) ? resolved : null
+})
+const posterSource = computed(() => resolveAsset(props.poster, { fallback: null }))
+const fallbackStyle = computed(() => ({
+  opacity: props.videoOpacity,
+  backgroundImage: posterSource.value ? `url(${posterSource.value})` : undefined
+}))
 </script>
 
 <style scoped>
@@ -73,8 +113,15 @@ const videoSource = computed(() => props.video)
   width: 100%;
   height: 100%;
   object-fit: cover;
-  mix-blend-mode: screen;
   pointer-events: none;
+  filter: saturate(1.05) brightness(0.65);
+}
+
+.hero__video--fallback {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(1.05) brightness(0.65);
 }
 
 .hero__overlay {
@@ -126,7 +173,8 @@ const videoSource = computed(() => props.video)
   width: clamp(160px, 25vw, 220px);
   margin-bottom: 1.75rem;
   filter: drop-shadow(0 0 18px rgba(198, 185, 255, 0.45));
-  animation: float 9s ease-in-out infinite;
+  opacity: 0;
+  animation: hero-fade 1.4s ease forwards 0.2s, float 9s ease-in-out infinite 1.6s;
 }
 
 .hero__content h1 {
@@ -180,8 +228,9 @@ const videoSource = computed(() => props.video)
   right: clamp(3%, 8vw, 12%);
   width: clamp(180px, 28vw, 280px);
   z-index: 1;
-  animation: float 7s ease-in-out infinite;
   pointer-events: none;
+  opacity: 0;
+  animation: hero-fade 1.6s ease forwards 0.6s, float 7s ease-in-out infinite 1.8s;
 }
 
 .hero__scroll {
@@ -241,6 +290,21 @@ const videoSource = computed(() => props.video)
   }
 }
 
+@keyframes hero-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes drift {
   0%,
   100% {
@@ -280,6 +344,34 @@ const videoSource = computed(() => props.video)
 
   .hero__scroll {
     bottom: 1.5rem;
+  }
+}
+
+.hero-line-enter-active {
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.hero-line-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.hero-line-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__logo,
+  .hero__mascot,
+  .hero__cta,
+  .hero-line-enter-active {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero__logo,
+  .hero__mascot {
+    opacity: 1;
   }
 }
 </style>

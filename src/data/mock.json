@@ -7,7 +7,7 @@
       "familia": "Poaceae",
       "parte_comestible": "grano",
       "via_fotosintesis": "C3",
-      "imagen_url": "/src/assets/plant_oryza.png"
+      "imagen_url": "/src/assets/images/plants/arroz.svg"
     },
     {
       "especie_id": 2,
@@ -16,7 +16,7 @@
       "familia": "Poaceae",
       "parte_comestible": "grano",
       "via_fotosintesis": "C4",
-      "imagen_url": "/src/assets/plant_maize.png"
+      "imagen_url": "/src/assets/images/plants/maiz.svg"
     },
     {
       "especie_id": 3,
@@ -25,7 +25,7 @@
       "familia": "Solanaceae",
       "parte_comestible": "fruto",
       "via_fotosintesis": "C3",
-      "imagen_url": "/src/assets/plant_tomato.png"
+      "imagen_url": "/src/assets/images/plants/tomate.svg"
     },
     {
       "especie_id": 4,
@@ -34,7 +34,7 @@
       "familia": "Asteraceae",
       "parte_comestible": "hoja",
       "via_fotosintesis": "C3",
-      "imagen_url": "/src/assets/plant_lettuce.png"
+      "imagen_url": "/src/assets/images/plants/lechuga.svg"
     },
     {
       "especie_id": 5,
@@ -43,7 +43,7 @@
       "familia": "Fabaceae",
       "parte_comestible": "semilla",
       "via_fotosintesis": "C3",
-      "imagen_url": "/src/assets/plant_bean.png"
+      "imagen_url": "/src/assets/images/plants/frijol.svg"
     },
     {
       "especie_id": 6,
@@ -52,7 +52,7 @@
       "familia": "Poaceae",
       "parte_comestible": "no comestible",
       "via_fotosintesis": "C4",
-      "imagen_url": "/src/assets/plant_cenchrus.png"
+      "imagen_url": "/src/assets/images/plants/pasto-napier.svg"
     }
   ],
   "experimentos": [

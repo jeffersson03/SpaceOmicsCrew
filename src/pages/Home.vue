@@ -1,6 +1,12 @@
 <template>
   <div class="home-page">
-    <HeroIntro @explore="scrollToMain" />
+    <HeroIntro
+      :video="heroVideo"
+      :poster="heroPoster"
+      :mascot="heroMascot"
+      :logo="logoSpace"
+      @explore="scrollToMain"
+    />
 
     <section ref="mainSection" class="container main-section">
       <div style="text-align:center;margin-bottom:1rem;">
@@ -24,7 +30,7 @@
             <button class="btn btn-secondary" @click="irAFichaPrimera">Ver 1er experimento</button>
           </div>
 
-          <PlantHotspots v-if="seleccion.imagen_url" :img="seleccion.imagen_url" :parts="hotspotParts" />
+          <PlantHotspots v-if="seleccionImagen" :img="seleccionImagen" :parts="hotspotParts" />
         </div>
 
         <RadarGraph :values="radarValues" :labels="radarLabels" :size="360" :palette="seleccionPalette" />
@@ -48,6 +54,8 @@ import PlantRadarGallery from '../components/PlantRadarGallery.vue'
 import HeroIntro from '../components/HeroIntro.vue'
 import { getEspecies, getExperimentos, getResultados } from '../services/api'
 import { plantThemes, defaultPlantTheme } from '../data/plantThemes'
+import { ensureEspecieMedia } from '../data/plantMedia'
+import { resolveAsset } from '../utils/assets'
 
 const especies = ref([])
 const seleccion = ref(null)
@@ -71,9 +79,22 @@ const hotspotParts = ref([
 
 const mainSection = ref(null)
 
+const heroPoster = resolveAsset('images/galaxy-poster.svg')
+const heroVideo = resolveAsset('images/galaxy.mp4', { fallback: heroPoster })
+const heroMascot = resolveAsset('images/mascot-astro.svg')
+const logoSpace = resolveAsset('images/logo-space.svg')
+
 const seleccionPalette = computed(() => {
   if (!seleccion.value) return defaultPlantTheme.palette
   return (plantThemes[seleccion.value.nombre_comun] || plantThemes[seleccion.value.nombre_cientifico] || defaultPlantTheme).palette
+})
+
+const seleccionImagen = computed(() => {
+  if (!seleccion.value) return null
+  return (
+    seleccion.value.imagen_asset ||
+    resolveAsset(seleccion.value.imagen_url, { fallback: resolveAsset('placeholder-plant.svg') })
+  )
 })
 
 const galleryReady = computed(() => especies.value.length && experimentos.value.length && resultados.value.length)
@@ -111,12 +132,12 @@ function scrollToMain() {
 
 onMounted(async () => {
   const [esp, exp, res] = await Promise.all([getEspecies(), getExperimentos(), getResultados()])
-  especies.value = esp
+  especies.value = esp.map(ensureEspecieMedia)
   experimentos.value = exp
   resultados.value = res
   if (esp.length) {
-    seleccion.value = esp[0]
-    cargarRadar(esp[0].especie_id)
+    seleccion.value = especies.value[0]
+    cargarRadar(especies.value[0].especie_id)
   }
 })
 </script>

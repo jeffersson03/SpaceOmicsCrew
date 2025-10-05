@@ -19,10 +19,12 @@
 
 <script setup>
 import { ref, onBeforeUnmount, watch } from 'vue'
+import { resolveAsset } from '../utils/assets'
 const props = defineProps({ especies: Array, autoRotateMs: { type: Number, default: 5000 } })
 const emit = defineEmits(['select', 'verRepositorio'])
 const idx = ref(0)
 let timer = null
+const placeholder = resolveAsset('placeholder-plant.svg')
 
 function totalEspecies() { return Array.isArray(props.especies) ? props.especies.length : 0 }
 function stopTimer() { if (timer) { clearInterval(timer); timer = null } }
@@ -59,7 +61,7 @@ function itemStyle(i) {
     return { transform: `translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`, zIndex: z }
 }
 function thumbStyle(s) {
-    const url = s.imagen_url || '/src/assets/placeholder-plant.svg'
+    const url = resolveAsset(s?.imagen_asset || s?.imagen_url, { fallback: placeholder })
     return { backgroundImage: `url('${url}')` }
 }
 watch(() => props.especies, (list) => {
