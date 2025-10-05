@@ -1,25 +1,25 @@
 <template>
-    <div class="card radar-card">
-        <div class="radar-header">
-            <h3>Atributos principales</h3>
-            <p class="muted">Se actualiza automáticamente con la planta seleccionada.</p>
+    <div class="card radar-card" :style="cardStyle">
+        <div v-if="!hideHeader" class="radar-header">
+            <h3>{{ title }}</h3>
+            <p class="muted">{{ subtitle }}</p>
         </div>
         <div class="radar-stage" :style="{ width: `${size}px`, height: `${size}px` }">
             <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`" role="img">
                 <defs>
                     <radialGradient :id="gradientId">
-                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
-                        <stop offset="100%" stop-color="#B799FF" stop-opacity="0.65" />
+                        <stop offset="0%" :stop-color="palette.fillCenter" :stop-opacity="palette.fillCenterOpacity" />
+                        <stop offset="100%" :stop-color="palette.fillEdge" :stop-opacity="palette.fillEdgeOpacity" />
                     </radialGradient>
                     <radialGradient :id="sweepGradient" fx="0.15" fy="0.15">
-                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
-                        <stop offset="35%" stop-color="#B799FF" stop-opacity="0.45" />
-                        <stop offset="100%" stop-color="#1B0D35" stop-opacity="0" />
+                        <stop offset="0%" :stop-color="palette.sweepInner" :stop-opacity="palette.sweepInnerOpacity" />
+                        <stop offset="35%" :stop-color="palette.sweepEdge" :stop-opacity="palette.sweepEdgeOpacity" />
+                        <stop offset="100%" :stop-color="palette.sweepFade" :stop-opacity="palette.sweepFadeOpacity" />
                     </radialGradient>
                 </defs>
                 <g :transform="`translate(${center},${center})`">
                     <g v-for="r in rings" :key="r" class="ring">
-                        <polygon :points="polygonPoints(r)" />
+                        <polygon :points="polygonPoints(r)" fill="none" />
                     </g>
                     <g class="sweep">
                         <path :d="sweepPath" :fill="`url(#${sweepGradient})`">
@@ -45,16 +45,54 @@
 <script>
 import { computed, defineComponent } from 'vue'
 
+const defaultPalette = {
+    surface: 'linear-gradient(135deg, rgba(15, 17, 35, 0.8), rgba(33, 23, 64, 0.65))',
+    grid: 'rgba(255, 255, 255, 0.14)',
+    axis: 'rgba(255, 255, 255, 0.22)',
+    text: 'var(--text)',
+    outline: '#F5D0FF',
+    point: '#B799FF',
+    pointStroke: '#ffffff',
+    fillCenter: '#ffffff',
+    fillCenterOpacity: 0.18,
+    fillEdge: '#B799FF',
+    fillEdgeOpacity: 0.65,
+    sweepInner: '#ffffff',
+    sweepInnerOpacity: 0,
+    sweepEdge: '#B799FF',
+    sweepEdgeOpacity: 0.45,
+    sweepFade: '#1B0D35',
+    sweepFadeOpacity: 0,
+    glow: 'rgba(183, 153, 255, 0.7)'
+}
+
 export default defineComponent({
     name: 'RadarGraph',
     props: {
         size: { type: Number, default: 360 },
         values: { type: Object, default: () => ({}) },
-        labels: { type: Object, default: () => ({}) }
+        labels: { type: Object, default: () => ({}) },
+        palette: { type: Object, default: () => ({}) },
+        title: { type: String, default: 'Atributos principales' },
+        subtitle: { type: String, default: 'Se actualiza automáticamente con la planta seleccionada.' },
+        hideHeader: { type: Boolean, default: false }
     },
     setup(props) {
         const gradientId = `radar-grad-${Math.random().toString(36).slice(2, 8)}`
         const sweepGradient = `radar-sweep-${Math.random().toString(36).slice(2, 8)}`
+        const palette = computed(() => ({ ...defaultPalette, ...(props.palette || {}) }))
+        const cardStyle = computed(() => ({
+            background: palette.value.surface,
+            color: palette.value.text,
+            '--radar-surface': palette.value.surface,
+            '--radar-grid': palette.value.grid,
+            '--radar-axis': palette.value.axis,
+            '--radar-text': palette.value.text,
+            '--radar-outline': palette.value.outline,
+            '--radar-point': palette.value.point,
+            '--radar-point-stroke': palette.value.pointStroke || '#ffffff',
+            '--radar-glow': palette.value.glow
+        }))
         const keys = computed(() => {
             const valueKeys = Object.keys(props.values || {})
             if (valueKeys.length) return valueKeys
@@ -104,6 +142,9 @@ export default defineComponent({
         return {
             size: props.size,
             labels: props.labels,
+            title: props.title,
+            subtitle: props.subtitle,
+            hideHeader: props.hideHeader,
             keys,
             center,
             rings,
@@ -114,7 +155,9 @@ export default defineComponent({
             vertexPoints,
             gradientId,
             sweepGradient,
-            sweepPath
+            sweepPath,
+            palette,
+            cardStyle
         }
     }
 })
@@ -123,13 +166,15 @@ export default defineComponent({
 <style scoped>
 .radar-card {
     padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--radar-surface, linear-gradient(135deg, rgba(15, 17, 35, 0.8), rgba(33, 23, 64, 0.65)));
+    color: var(--radar-text, var(--text));
 }
 
 .radar-header {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    color: var(--accent1);
 }
 
 .radar-header h3 {
@@ -151,18 +196,17 @@ export default defineComponent({
 }
 
 .ring polygon {
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.14);
+    stroke: var(--radar-grid);
     stroke-width: 1;
 }
 
 .axis line {
-    stroke: rgba(255, 255, 255, 0.22);
+    stroke: var(--radar-axis);
     stroke-width: 1;
 }
 
 .axis text {
-    fill: var(--text);
+    fill: var(--radar-text);
     text-anchor: middle;
     font-weight: 500;
     letter-spacing: 0.2px;
@@ -174,25 +218,25 @@ export default defineComponent({
 }
 
 .data-fill {
-    stroke: var(--bg3);
+    stroke: var(--radar-outline);
     stroke-width: 2;
     fill-opacity: 0.4;
     transition: all 0.6s ease;
 }
 
 .data-outline {
-    stroke: var(--accent2);
+    stroke: var(--radar-outline);
     stroke-width: 2;
     fill: none;
     stroke-linejoin: round;
-    opacity: 0.8;
+    opacity: 0.85;
 }
 
 .data-point circle {
-    fill: var(--accent1);
-    stroke: #fff;
+    fill: var(--radar-point);
+    stroke: var(--radar-point-stroke);
     stroke-width: 1.5;
-    filter: drop-shadow(0 0 6px rgba(183, 153, 255, 0.7));
+    filter: drop-shadow(0 0 6px var(--radar-glow));
     transition: transform 0.3s ease;
 }
 
