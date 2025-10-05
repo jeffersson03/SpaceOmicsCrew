@@ -37,16 +37,25 @@ export async function getFichaByExperimento(id) {
 export async function getRepoFiltersByEspecie(especieId) {
   const [exp, fuentes] = await Promise.all([getExperimentos(), getFuentes()])
   const subset = exp.filter(e => e.especie_id === Number(especieId))
+  if (!subset.length) {
+    return { sistemas: [], anio_min: null, anio_max: null, ph_min: null, ph_max: null, ec_min: null, ec_max: null }
+  }
   const systems = Array.from(new Set(subset.map(s => s.sistema_cultivo_id))).map(id => ({ sistema_cultivo_id: id, nombre: 'Sistema ' + id }))
-  const anios = subset.map(e => fuentes.find(f => f.fuente_id === e.fuente_id)?.anio).filter(Boolean)
+  const anios = subset
+    .map(e => fuentes.find(f => f.fuente_id === e.fuente_id)?.anio)
+    .filter(n => Number.isFinite(n))
+  const phValues = subset.map(e => Number(e.env_ph)).filter(n => Number.isFinite(n))
+  const ecValues = subset.map(e => Number(e.env_ec_conductividad)).filter(n => Number.isFinite(n))
+  const safeMin = arr => (arr.length ? Math.min(...arr) : null)
+  const safeMax = arr => (arr.length ? Math.max(...arr) : null)
   return {
     sistemas: systems,
-    anio_min: Math.min(...anios),
-    anio_max: Math.max(...anios),
-    ph_min: Math.min(...subset.map(e => e.env_ph)),
-    ph_max: Math.max(...subset.map(e => e.env_ph)),
-    ec_min: Math.min(...subset.map(e => e.env_ec_conductividad)),
-    ec_max: Math.max(...subset.map(e => e.env_ec_conductividad))
+    anio_min: safeMin(anios),
+    anio_max: safeMax(anios),
+    ph_min: safeMin(phValues),
+    ph_max: safeMax(phValues),
+    ec_min: safeMin(ecValues),
+    ec_max: safeMax(ecValues)
   }
 }
 
