@@ -18,14 +18,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, watch } from 'vue'
 const props = defineProps({ especies: Array, autoRotateMs: { type: Number, default: 5000 } })
 const emit = defineEmits(['select', 'verRepositorio'])
 const idx = ref(0)
 let timer = null
-function next() { idx.value = (idx.value + 1) % props.especes.length; emit('select', props.especies[idx.value]) }
-function prev() { idx.value = (idx.value - 1 + props.especies.length) % props.especies.length; emit('select', props.especies[idx.value]) }
-function centerOn(i) { idx.value = i; emit('select', props.especies[idx.value]) }
+
+function totalEspecies() { return Array.isArray(props.especies) ? props.especies.length : 0 }
+function stopTimer() { if (timer) { clearInterval(timer); timer = null } }
+function startTimer() {
+    if (props.autoRotateMs > 0 && totalEspecies() > 1) {
+        timer = setInterval(() => advance(1, { fromTimer: true }), props.autoRotateMs)
+    }
+}
+function restartTimer() { stopTimer(); startTimer() }
+function emitSelection() {
+    if (!totalEspecies()) return
+    emit('select', props.especies[idx.value])
+}
+function goTo(i, { fromTimer = false } = {}) {
+    const total = totalEspecies()
+    if (!total) return
+    idx.value = (i + total) % total
+    emitSelection()
+    if (!fromTimer) restartTimer()
+}
+function advance(step = 1, options = {}) {
+    goTo(idx.value + step, options)
+}
+function next() { advance(1) }
+function prev() { advance(-1) }
+function centerOn(i) { goTo(i) }
 function itemStyle(i) {
     const offset = i - idx.value
     const depth = Math.max(0, 1 - Math.abs(offset) * 0.2)
@@ -39,8 +62,17 @@ function thumbStyle(s) {
     const url = s.imagen_url || '/src/assets/placeholder-plant.svg'
     return { backgroundImage: `url('${url}')` }
 }
-onMounted(() => { if (props.especies?.length) { emit('select', props.especies[0]); if (props.autoRotateMs > 0 && props.especies.length > 1) { timer = setInterval(() => next(), props.autoRotateMs) } } })
-onBeforeUnmount(() => { if (timer) clearInterval(timer) })
+watch(() => props.especies, (list) => {
+    stopTimer()
+    if (Array.isArray(list) && list.length) {
+        idx.value = Math.min(idx.value, list.length - 1)
+        emitSelection()
+        startTimer()
+    } else {
+        idx.value = 0
+    }
+}, { immediate: true })
+onBeforeUnmount(() => { stopTimer() })
 </script>
 
 <style scoped>
