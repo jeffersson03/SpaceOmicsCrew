@@ -24,21 +24,31 @@
         <PlantHotspots v-if="seleccion.imagen_url" :img="seleccion.imagen_url" :parts="hotspotParts" />
       </div>
 
-      <RadarGraph :values="radarValues" :labels="radarLabels" :size="360" />
+      <RadarGraph :values="radarValues" :labels="radarLabels" :size="360" :palette="seleccionPalette" />
     </div>
+
+    <section v-if="galleryReady" class="gallery-section">
+      <h2>Mapas radiales interactivos por cultivo</h2>
+      <p class="muted">Visualiza cada especie con su holograma 3D y radar dinámico.</p>
+      <PlantRadarGallery :species="especies" :experiments="experimentos" :results="resultados" :labels="radarLabels" />
+    </section>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import PlantCarousel from '../components/PlantCarousel.vue'
 import RadarGraph from '../components/RadarGraph.vue'
 import PlantHotspots from '../components/PlantHotspots.vue'
+import PlantRadarGallery from '../components/PlantRadarGallery.vue'
 import { getEspecies, getExperimentos, getResultados } from '../services/api'
+import { plantThemes, defaultPlantTheme } from '../data/plantThemes'
 
 const especies = ref([])
 const seleccion = ref(null)
 const radarValues = ref({})
+const experimentos = ref([])
+const resultados = ref([])
 const radarLabels = {
   rendimiento: 'Rendimiento (g/m²/d)',
   dias: 'Días a cosecha',
@@ -54,12 +64,21 @@ const hotspotParts = ref([
   { id: 'fruto', label: 'Fruto', x: 0.45, y: 0.25 }
 ])
 
-function onSelect(esp) { seleccion.value = esp; cargarRadar(esp.especie_id) }
+const seleccionPalette = computed(() => {
+  if (!seleccion.value) return defaultPlantTheme.palette
+  return (plantThemes[seleccion.value.nombre_comun] || plantThemes[seleccion.value.nombre_cientifico] || defaultPlantTheme).palette
+})
 
-async function cargarRadar(especieId) {
-  const [exp, res] = await Promise.all([getExperimentos(), getResultados()])
-  const e = exp.find(x => x.especie_id === especieId)
-  const r = e ? res.find(x => x.experimento_id === e.experimento_id) : null
+const galleryReady = computed(() => especies.value.length && experimentos.value.length && resultados.value.length)
+
+function onSelect(esp) {
+  seleccion.value = esp
+  cargarRadar(esp.especie_id)
+}
+
+function cargarRadar(especieId) {
+  const e = experimentos.value.find(x => x.especie_id === especieId)
+  const r = e ? resultados.value.find(x => x.experimento_id === e.experimento_id) : null
   radarValues.value = {
     rendimiento: r?.rendimiento_g_m2_d || 0,
     dias: r?.dias_cosecha || 0,
@@ -71,10 +90,37 @@ async function cargarRadar(especieId) {
 
 function verRepo(esp) { window.location.hash = `#/repositorio/${esp.especie_id}` }
 async function irAFichaPrimera() {
-  const exps = await getExperimentos()
-  const e = exps.find(x => x.especie_id === seleccion.value.especie_id)
+  if (!seleccion.value) return
+  if (!experimentos.value.length) experimentos.value = await getExperimentos()
+  const e = experimentos.value.find(x => x.especie_id === seleccion.value.especie_id)
   if (e) window.location.hash = `#/experimento/${e.experimento_id}`
 }
 
-onMounted(async () => { especies.value = await getEspecies() })
+onMounted(async () => {
+  const [esp, exp, res] = await Promise.all([getEspecies(), getExperimentos(), getResultados()])
+  especies.value = esp
+  experimentos.value = exp
+  resultados.value = res
+  if (esp.length) {
+    seleccion.value = esp[0]
+    cargarRadar(esp[0].especie_id)
+  }
+})
 </script>
+
+<style scoped>
+.gallery-section {
+  margin-top: 3rem;
+}
+
+.gallery-section h2 {
+  margin-bottom: 0.35rem;
+  color: var(--accent1);
+  font-weight: 800;
+}
+
+.gallery-section p {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+</style>
